@@ -1,4 +1,4 @@
-name: Build Unity iOS
+name: Build Unity iOS IPA
 
 on:
   workflow_dispatch:
@@ -16,16 +16,6 @@ jobs:
       - name: Xcode version
         run: xcodebuild -version
 
-      - name: List project
-        run: |
-          echo "===== ROOT ====="
-          ls -la
-
-          echo "===== XCODE PROJECT ====="
-          xcodebuild \
-            -project Unity-iPhone.xcodeproj \
-            -list
-
       - name: Build iOS without signing
         run: |
           xcodebuild \
@@ -38,10 +28,34 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             build
 
-      - name: Upload build
-        if: success()
+      - name: Find app
+        run: |
+          echo "===== BUILD PRODUCTS ====="
+          find build/DerivedData/Build/Products -name "*.app" -type d -maxdepth 4
+
+      - name: Create unsigned IPA
+        run: |
+          APP_PATH=$(find build/DerivedData/Build/Products/Release-iphoneos -maxdepth 1 -name "*.app" -type d | head -1)
+
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR: Không tìm thấy .app"
+            exit 1
+          fi
+
+          echo "Found app: $APP_PATH"
+
+          mkdir -p build/ipa/Payload
+          cp -R "$APP_PATH" build/ipa/Payload/
+
+          cd build/ipa
+          zip -r "../NRO-unsigned.ipa" Payload
+
+          echo "===== IPA CREATED ====="
+          ls -lh ../NRO-unsigned.ipa
+
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Unity-iOS-Build
-          path: build/DerivedData/Build/Products/Release-iphoneos/
+          name: NRO-iOS-IPA
+          path: build/NRO-unsigned.ipa
           retention-days: 7
