@@ -1,0 +1,47 @@
+name: Build Unity iOS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Xcode version
+        run: xcodebuild -version
+
+      - name: List project
+        run: |
+          echo "===== ROOT ====="
+          ls -la
+
+          echo "===== XCODE PROJECT ====="
+          xcodebuild \
+            -project Unity-iPhone.xcodeproj \
+            -list
+
+      - name: Build iOS without signing
+        run: |
+          xcodebuild \
+            -project Unity-iPhone.xcodeproj \
+            -scheme Unity-iPhone \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+
+      - name: Upload build
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Unity-iOS-Build
+          path: build/DerivedData/Build/Products/Release-iphoneos/
+          retention-days: 7
